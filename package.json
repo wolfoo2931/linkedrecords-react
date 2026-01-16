@@ -20,7 +20,7 @@
   "dependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "linkedrecords": "git+ssh://git@github.com/wolfoo2931/linkedrecords#94b27a5fdbb4892269735c041c6c7e88e4b957d0"
+    "linkedrecords": "git+ssh://git@github.com/wolfoo2931/linkedrecords#7c155663ee566b1c63818af4a69acfe0b112d798"
   },
   "devDependencies": {
     "@types/react": "^19.1.12",

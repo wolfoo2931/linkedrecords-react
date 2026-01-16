@@ -12,17 +12,12 @@ export function useKeyValueAttributes(query: any[]): KVValue[]  {
   const [ attributes, setAttributes ] = useState<KVValue[]>([]);
 
   useEffect(() => {
-    lr.Attribute.findAndLoadAll({
+    const unsubscribeFnPromise = lr.Attribute.subscribeToQuery({
       attributes: [
         ['$it', '$hasDataType', KeyValueAttribute],
         ...query
       ],
-    }).then(async ({ attributes }) => {
-      const values = await Promise.all(attributes.map(async (a) => ({
-        _id: a.id,
-        ...(await a.getValue()),
-      })));
-
+    }, async ({ attributes }) => {
       attributes.forEach((a) => {
         a.subscribe(async () => {
           const values = await Promise.all(attributes.map(async (a) => ({
@@ -44,9 +39,11 @@ export function useKeyValueAttributes(query: any[]): KVValue[]  {
           setAttributes(newValues);
         });
       })
-
-      setAttributes(values);
     });
+
+    return () => {
+      unsubscribeFnPromise.then(fn => fn());
+    }
   }, [ lr.Attribute, setAttributes ]);
 
   return attributes;

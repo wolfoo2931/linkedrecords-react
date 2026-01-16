@@ -12,33 +12,46 @@ export function useKeyValueAttributes(query: any[]): KVValue[]  {
   const [ attributes, setAttributes ] = useState<KVValue[]>([]);
 
   useEffect(() => {
-    const unsubscribeFnPromise = lr.Attribute.subscribeToQuery({
-      attributes: [
-        ['$it', '$hasDataType', KeyValueAttribute],
-        ...query
-      ],
-    }, async ({ attributes }) => {
-      attributes.forEach((a) => {
-        a.subscribe(async () => {
-          const values = await Promise.all(attributes.map(async (a) => ({
-            _id: a.id,
-            ...(await a.getValue()),
-          })));
+    const unsubscribeFnPromise = new Promise<void>((resolve) => {
+      const checkActorId = () => {
+        if (lr.actorId !== undefined) {
+          resolve();
+        } else {
+          setTimeout(checkActorId, 50);
+        }
+      };
+      checkActorId();
+    }).then(() => {
+      return lr.Attribute.subscribeToQuery({
+        attributes: [
+          ['$it', '$hasDataType', KeyValueAttribute],
+          ...query
+        ],
+      }, async ({ attributes }) => {
+        const values = await Promise.all(attributes.map(async (a) => ({
+          _id: a.id,
+          ...(await a.getValue()),
+        })));
 
-          const newValues = await Promise.all(values.map(async (v) => {
-            if (v._id === a.id) {
-              return {
-                _id: a.id,
-                ...(await a.getValue()),
+        attributes.forEach((a) => {
+          a.subscribe(async () => {
+            const newValues = await Promise.all(values.map(async (v) => {
+              if (v._id === a.id) {
+                return {
+                  _id: a.id,
+                  ...(await a.getValue()),
+                }
               }
-            }
 
-            return v;
-          }));
+              return v;
+            }));
 
-          setAttributes(newValues);
-        });
-      })
+            setAttributes(newValues);
+          });
+
+          setAttributes(values);
+        })
+      });
     });
 
     return () => {

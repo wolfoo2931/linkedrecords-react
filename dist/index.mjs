@@ -40,7 +40,7 @@ function useKeyValueAttributes(query) {
       };
       checkActorId();
     }).then(() => {
-      return lr.Attribute.subscribeToQuery({
+      const queryUnsubscribe = lr.Attribute.subscribeToQuery({
         attributes: [
           ["$it", "$hasDataType", KeyValueAttribute],
           ...query
@@ -50,22 +50,19 @@ function useKeyValueAttributes(query) {
           _id: a.id,
           ...await a.getValue()
         })));
+        setAttributes(values);
         attributes2.forEach((a) => {
           a.subscribe(async () => {
-            const newValues = await Promise.all(values.map(async (v) => {
-              if (v._id === a.id) {
-                return {
-                  _id: a.id,
-                  ...await a.getValue()
-                };
-              }
-              return v;
-            }));
-            setAttributes(newValues);
+            const newValue = await a.getValue();
+            setAttributes((prev) => prev.map(
+              (v) => v._id === a.id ? { _id: a.id, ...newValue } : v
+            ));
           });
-          setAttributes(values);
         });
       });
+      return () => {
+        queryUnsubscribe.then((unsubscribe) => unsubscribe());
+      };
     });
     return () => {
       unsubscribeFnPromise.then((fn) => fn());

@@ -30,36 +30,46 @@ function useKeyValueAttributes(query) {
   const { lr } = useLinkedRecords();
   const [attributes, setAttributes] = useState([]);
   useEffect(() => {
-    lr.Attribute.findAndLoadAll({
-      attributes: [
-        ["$it", "$hasDataType", KeyValueAttribute],
-        ...query
-      ]
-    }).then(async ({ attributes: attributes2 }) => {
-      const values = await Promise.all(attributes2.map(async (a) => ({
-        _id: a.id,
-        ...await a.getValue()
-      })));
-      attributes2.forEach((a) => {
-        a.subscribe(async () => {
-          const values2 = await Promise.all(attributes2.map(async (a2) => ({
-            _id: a2.id,
-            ...await a2.getValue()
-          })));
-          const newValues = await Promise.all(values2.map(async (v) => {
-            if (v._id === a.id) {
-              return {
-                _id: a.id,
-                ...await a.getValue()
-              };
-            }
-            return v;
-          }));
-          setAttributes(newValues);
+    const unsubscribeFnPromise = new Promise((resolve) => {
+      const checkActorId = () => {
+        if (lr.actorId !== void 0) {
+          resolve();
+        } else {
+          setTimeout(checkActorId, 50);
+        }
+      };
+      checkActorId();
+    }).then(() => {
+      return lr.Attribute.subscribeToQuery({
+        attributes: [
+          ["$it", "$hasDataType", KeyValueAttribute],
+          ...query
+        ]
+      }, async ({ attributes: attributes2 }) => {
+        const values = await Promise.all(attributes2.map(async (a) => ({
+          _id: a.id,
+          ...await a.getValue()
+        })));
+        attributes2.forEach((a) => {
+          a.subscribe(async () => {
+            const newValues = await Promise.all(values.map(async (v) => {
+              if (v._id === a.id) {
+                return {
+                  _id: a.id,
+                  ...await a.getValue()
+                };
+              }
+              return v;
+            }));
+            setAttributes(newValues);
+          });
+          setAttributes(values);
         });
       });
-      setAttributes(values);
     });
+    return () => {
+      unsubscribeFnPromise.then((fn) => fn());
+    };
   }, [lr.Attribute, setAttributes]);
   return attributes;
 }

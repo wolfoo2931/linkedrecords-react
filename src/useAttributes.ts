@@ -22,7 +22,7 @@ export function useKeyValueAttributes(query: any[]): KVValue[]  {
       };
       checkActorId();
     }).then(() => {
-      return lr.Attribute.subscribeToQuery({
+      const queryUnsubscribe = lr.Attribute.subscribeToQuery({
         attributes: [
           ['$it', '$hasDataType', KeyValueAttribute],
           ...query
@@ -33,25 +33,25 @@ export function useKeyValueAttributes(query: any[]): KVValue[]  {
           ...(await a.getValue()),
         })));
 
+        setAttributes(values);
+
         attributes.forEach((a) => {
           a.subscribe(async () => {
-            const newValues = await Promise.all(values.map(async (v) => {
-              if (v._id === a.id) {
-                return {
-                  _id: a.id,
-                  ...(await a.getValue()),
-                }
-              }
+            const newValue = await a.getValue();
 
-              return v;
-            }));
-
-            setAttributes(newValues);
+            // Use functional update to avoid stale closure
+            setAttributes(prev => prev.map(v =>
+              v._id === a.id
+                ? { _id: a.id, ...newValue }
+                : v
+            ));
           });
-
-          setAttributes(values);
-        })
+        });
       });
+
+      return () => {
+        queryUnsubscribe.then(unsubscribe => unsubscribe());
+      };
     });
 
     return () => {

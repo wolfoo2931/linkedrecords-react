@@ -21,4 +21,9 @@ declare function useKeyValueAttributes(query: any[]): KVValue[];
 
 declare function useLinkedRecords(): LinkedRecordsContextType;
 
-export { LinkedRecordsContext, type LinkedRecordsContextType, LinkedRecordsProvider, useKeyValueAttributes, useLinkedRecords };
+type UserInfo = {
+    email: string;
+};
+declare function useUserInfo(): UserInfo | null;
+
+export { LinkedRecordsContext, type LinkedRecordsContextType, LinkedRecordsProvider, useKeyValueAttributes, useLinkedRecords, useUserInfo };

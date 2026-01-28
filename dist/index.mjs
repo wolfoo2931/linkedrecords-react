@@ -70,9 +70,21 @@ function useKeyValueAttributes(query) {
   }, [lr.Attribute, setAttributes]);
   return attributes;
 }
+
+// src/useUserInfo.ts
+import { useEffect as useEffect2, useState as useState2 } from "react";
+function useUserInfo() {
+  const { lr } = useLinkedRecords();
+  const [userInfo, setUserInfo] = useState2(null);
+  useEffect2(() => {
+    lr.getCurrentUserEmail().then((email) => setUserInfo({ email })).catch(() => setUserInfo(null));
+  }, [lr]);
+  return userInfo;
+}
 export {
   LinkedRecordsContext,
   LinkedRecordsProvider,
   useKeyValueAttributes,
-  useLinkedRecords
+  useLinkedRecords,
+  useUserInfo
 };

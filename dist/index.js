@@ -33,7 +33,8 @@ __export(index_exports, {
   LinkedRecordsContext: () => LinkedRecordsContext,
   LinkedRecordsProvider: () => LinkedRecordsProvider,
   useKeyValueAttributes: () => useKeyValueAttributes,
-  useLinkedRecords: () => useLinkedRecords
+  useLinkedRecords: () => useLinkedRecords,
+  useUserInfo: () => useUserInfo
 });
 module.exports = __toCommonJS(index_exports);
 
@@ -109,10 +110,22 @@ function useKeyValueAttributes(query) {
   }, [lr.Attribute, setAttributes]);
   return attributes;
 }
+
+// src/useUserInfo.ts
+var import_react5 = require("react");
+function useUserInfo() {
+  const { lr } = useLinkedRecords();
+  const [userInfo, setUserInfo] = (0, import_react5.useState)(null);
+  (0, import_react5.useEffect)(() => {
+    lr.getCurrentUserEmail().then((email) => setUserInfo({ email })).catch(() => setUserInfo(null));
+  }, [lr]);
+  return userInfo;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   LinkedRecordsContext,
   LinkedRecordsProvider,
   useKeyValueAttributes,
-  useLinkedRecords
+  useLinkedRecords,
+  useUserInfo
 });

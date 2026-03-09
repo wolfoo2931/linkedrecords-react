@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import LinkedRecords from 'linkedrecords/browser_sdk';
+import LinkedRecords from '@linkedrecords/browser';
 import { LinkedRecordsContext } from './linkedRecordsContext';
 
 interface LinkedRecordsProviderProps {

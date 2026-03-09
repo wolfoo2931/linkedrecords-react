@@ -1,6 +1,6 @@
 import * as react from 'react';
 import { ReactNode } from 'react';
-import LinkedRecords from 'linkedrecords/browser_sdk';
+import LinkedRecords from '@linkedrecords/browser';
 import * as react_jsx_runtime from 'react/jsx-runtime';
 
 interface LinkedRecordsContextType {

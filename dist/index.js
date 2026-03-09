@@ -44,10 +44,10 @@ var LinkedRecordsContext = (0, import_react.createContext)(void 0);
 
 // src/LinkedRecordsProvider.tsx
 var import_react2 = require("react");
-var import_browser_sdk = __toESM(require("linkedrecords/browser_sdk"));
+var import_browser = __toESM(require("@linkedrecords/browser"));
 var import_jsx_runtime = require("react/jsx-runtime");
 function LinkedRecordsProvider({ children, serverUrl }) {
-  const lr = import_browser_sdk.default.getPublicClient(serverUrl);
+  const lr = import_browser.default.getPublicClient(serverUrl);
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LinkedRecordsContext.Provider, { value: { lr }, children });
 }
 
@@ -65,7 +65,7 @@ function useLinkedRecords() {
 }
 
 // src/useAttributes.ts
-var import_browser_sdk2 = require("linkedrecords/browser_sdk");
+var import_browser2 = require("@linkedrecords/browser");
 function useKeyValueAttributes(query) {
   const { lr } = useLinkedRecords();
   const [attributes, setAttributes] = (0, import_react4.useState)([]);
@@ -82,7 +82,7 @@ function useKeyValueAttributes(query) {
     }).then(() => {
       const queryUnsubscribe = lr.Attribute.subscribeToQuery({
         attributes: [
-          ["$it", "$hasDataType", import_browser_sdk2.KeyValueAttribute],
+          ["$it", "$hasDataType", import_browser2.KeyValueAttribute],
           ...query
         ]
       }, async ({ attributes: attributes2 }) => {

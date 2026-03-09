@@ -4,7 +4,7 @@ var LinkedRecordsContext = createContext(void 0);
 
 // src/LinkedRecordsProvider.tsx
 import "react";
-import LinkedRecords from "linkedrecords/browser_sdk";
+import LinkedRecords from "@linkedrecords/browser";
 import { jsx } from "react/jsx-runtime";
 function LinkedRecordsProvider({ children, serverUrl }) {
   const lr = LinkedRecords.getPublicClient(serverUrl);
@@ -25,7 +25,7 @@ function useLinkedRecords() {
 }
 
 // src/useAttributes.ts
-import { KeyValueAttribute } from "linkedrecords/browser_sdk";
+import { KeyValueAttribute } from "@linkedrecords/browser";
 function useKeyValueAttributes(query) {
   const { lr } = useLinkedRecords();
   const [attributes, setAttributes] = useState([]);

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { useLinkedRecords } from "./useLinkedRecords";
-import { KeyValueAttribute } from "linkedrecords/browser_sdk";
+import { KeyValueAttribute } from '@linkedrecords/browser';
 
 interface KVValue {
   [key: string]: KVValue | string | boolean | number | undefined;

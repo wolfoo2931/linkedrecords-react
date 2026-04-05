@@ -1,6 +1,6 @@
 {
   "name": "@linkedrecords/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
   "license": "AGPL-3.0",
   "description": "",
   "dependencies": {
-    "@linkedrecords/browser": "^0.1.0",
+    "@linkedrecords/browser": "^0.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

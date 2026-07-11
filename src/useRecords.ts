@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { useLinkedRecords } from "./useLinkedRecords";
-import { KeyValueAttribute } from '@linkedrecords/browser';
+import { KeyValueRecord } from '@linkedrecords/browser';
 
 interface KVValue {
   [key: string]: KVValue | string | boolean | number | undefined;
 }
 
-export function useKeyValueAttributes(query: any[]): KVValue[]  {
+export function useKeyValueRecords(query: any[]): KVValue[]  {
   const { lr } = useLinkedRecords();
-  const [ attributes, setAttributes ] = useState<KVValue[]>([]);
+  const [ records, setRecords ] = useState<KVValue[]>([]);
 
   useEffect(() => {
     const unsubscribeFnPromise = new Promise<void>((resolve) => {
@@ -22,27 +22,27 @@ export function useKeyValueAttributes(query: any[]): KVValue[]  {
       };
       checkActorId();
     }).then(() => {
-      const queryUnsubscribe = lr.Attribute.subscribeToQuery({
-        attributes: [
-          ['$it', '$hasDataType', KeyValueAttribute],
+      const queryUnsubscribe = lr.Record.subscribeToQuery({
+        records: [
+          ['$it', '$hasDataType', KeyValueRecord],
           ...query
         ],
-      }, async ({ attributes }) => {
-        const values = await Promise.all(attributes.map(async (a) => ({
-          _id: a.id,
-          ...(await a.getValue()),
+      }, async ({ records }) => {
+        const values = await Promise.all(records.map(async (r) => ({
+          _id: r.id,
+          ...(await r.getValue()),
         })));
 
-        setAttributes(values);
+        setRecords(values);
 
-        attributes.forEach((a) => {
-          a.subscribe(async () => {
-            const newValue = await a.getValue();
+        records.forEach((r) => {
+          r.subscribe(async () => {
+            const newValue = await r.getValue();
 
             // Use functional update to avoid stale closure
-            setAttributes(prev => prev.map(v =>
-              v._id === a.id
-                ? { _id: a.id, ...newValue }
+            setRecords(prev => prev.map(v =>
+              v._id === r.id
+                ? { _id: r.id, ...newValue }
                 : v
             ));
           });
@@ -57,7 +57,10 @@ export function useKeyValueAttributes(query: any[]): KVValue[]  {
     return () => {
       unsubscribeFnPromise.then(fn => fn());
     }
-  }, [ lr.Attribute, setAttributes ]);
+  }, [ lr.Record, setRecords ]);
 
-  return attributes;
+  return records;
 }
+
+/** @deprecated Use useKeyValueRecords instead. */
+export const useKeyValueAttributes = useKeyValueRecords;

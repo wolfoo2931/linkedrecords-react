@@ -1,6 +1,6 @@
 {
   "name": "@linkedrecords/react",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,10 +16,10 @@
   },
   "keywords": [],
   "author": "Oliver Wolf",
-  "license": "AGPL-3.0",
+  "license": "MIT",
   "description": "",
   "dependencies": {
-    "@linkedrecords/browser": "^0.1.1",
+    "@linkedrecords/browser": "^0.2.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

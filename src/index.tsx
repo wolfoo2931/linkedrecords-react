@@ -1,5 +1,5 @@
 export * from './linkedRecordsContext';
 export * from './LinkedRecordsProvider';
-export * from './useAttributes';
+export * from './useRecords';
 export * from './useLinkedRecords';
 export * from './useUserInfo';

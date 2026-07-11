@@ -11,7 +11,7 @@ function LinkedRecordsProvider({ children, serverUrl }) {
   return /* @__PURE__ */ jsx(LinkedRecordsContext.Provider, { value: { lr }, children });
 }
 
-// src/useAttributes.ts
+// src/useRecords.ts
 import { useEffect, useState } from "react";
 
 // src/useLinkedRecords.ts
@@ -24,11 +24,11 @@ function useLinkedRecords() {
   return context;
 }
 
-// src/useAttributes.ts
-import { KeyValueAttribute } from "@linkedrecords/browser";
-function useKeyValueAttributes(query) {
+// src/useRecords.ts
+import { KeyValueRecord } from "@linkedrecords/browser";
+function useKeyValueRecords(query) {
   const { lr } = useLinkedRecords();
-  const [attributes, setAttributes] = useState([]);
+  const [records, setRecords] = useState([]);
   useEffect(() => {
     const unsubscribeFnPromise = new Promise((resolve) => {
       const checkActorId = () => {
@@ -40,22 +40,22 @@ function useKeyValueAttributes(query) {
       };
       checkActorId();
     }).then(() => {
-      const queryUnsubscribe = lr.Attribute.subscribeToQuery({
-        attributes: [
-          ["$it", "$hasDataType", KeyValueAttribute],
+      const queryUnsubscribe = lr.Record.subscribeToQuery({
+        records: [
+          ["$it", "$hasDataType", KeyValueRecord],
           ...query
         ]
-      }, async ({ attributes: attributes2 }) => {
-        const values = await Promise.all(attributes2.map(async (a) => ({
-          _id: a.id,
-          ...await a.getValue()
+      }, async ({ records: records2 }) => {
+        const values = await Promise.all(records2.map(async (r) => ({
+          _id: r.id,
+          ...await r.getValue()
         })));
-        setAttributes(values);
-        attributes2.forEach((a) => {
-          a.subscribe(async () => {
-            const newValue = await a.getValue();
-            setAttributes((prev) => prev.map(
-              (v) => v._id === a.id ? { _id: a.id, ...newValue } : v
+        setRecords(values);
+        records2.forEach((r) => {
+          r.subscribe(async () => {
+            const newValue = await r.getValue();
+            setRecords((prev) => prev.map(
+              (v) => v._id === r.id ? { _id: r.id, ...newValue } : v
             ));
           });
         });
@@ -67,9 +67,10 @@ function useKeyValueAttributes(query) {
     return () => {
       unsubscribeFnPromise.then((fn) => fn());
     };
-  }, [lr.Attribute, setAttributes]);
-  return attributes;
+  }, [lr.Record, setRecords]);
+  return records;
 }
+var useKeyValueAttributes = useKeyValueRecords;
 
 // src/useUserInfo.ts
 import { useEffect as useEffect2, useState as useState2 } from "react";
@@ -85,6 +86,7 @@ export {
   LinkedRecordsContext,
   LinkedRecordsProvider,
   useKeyValueAttributes,
+  useKeyValueRecords,
   useLinkedRecords,
   useUserInfo
 };

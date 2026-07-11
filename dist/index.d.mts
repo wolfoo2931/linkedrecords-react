@@ -17,7 +17,9 @@ declare function LinkedRecordsProvider({ children, serverUrl }: LinkedRecordsPro
 interface KVValue {
     [key: string]: KVValue | string | boolean | number | undefined;
 }
-declare function useKeyValueAttributes(query: any[]): KVValue[];
+declare function useKeyValueRecords(query: any[]): KVValue[];
+/** @deprecated Use useKeyValueRecords instead. */
+declare const useKeyValueAttributes: typeof useKeyValueRecords;
 
 declare function useLinkedRecords(): LinkedRecordsContextType;
 
@@ -26,4 +28,4 @@ type UserInfo = {
 };
 declare function useUserInfo(): UserInfo | null;
 
-export { LinkedRecordsContext, type LinkedRecordsContextType, LinkedRecordsProvider, useKeyValueAttributes, useLinkedRecords, useUserInfo };
+export { LinkedRecordsContext, type LinkedRecordsContextType, LinkedRecordsProvider, useKeyValueAttributes, useKeyValueRecords, useLinkedRecords, useUserInfo };

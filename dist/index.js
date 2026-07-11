@@ -33,6 +33,7 @@ __export(index_exports, {
   LinkedRecordsContext: () => LinkedRecordsContext,
   LinkedRecordsProvider: () => LinkedRecordsProvider,
   useKeyValueAttributes: () => useKeyValueAttributes,
+  useKeyValueRecords: () => useKeyValueRecords,
   useLinkedRecords: () => useLinkedRecords,
   useUserInfo: () => useUserInfo
 });
@@ -51,7 +52,7 @@ function LinkedRecordsProvider({ children, serverUrl }) {
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LinkedRecordsContext.Provider, { value: { lr }, children });
 }
 
-// src/useAttributes.ts
+// src/useRecords.ts
 var import_react4 = require("react");
 
 // src/useLinkedRecords.ts
@@ -64,11 +65,11 @@ function useLinkedRecords() {
   return context;
 }
 
-// src/useAttributes.ts
+// src/useRecords.ts
 var import_browser2 = require("@linkedrecords/browser");
-function useKeyValueAttributes(query) {
+function useKeyValueRecords(query) {
   const { lr } = useLinkedRecords();
-  const [attributes, setAttributes] = (0, import_react4.useState)([]);
+  const [records, setRecords] = (0, import_react4.useState)([]);
   (0, import_react4.useEffect)(() => {
     const unsubscribeFnPromise = new Promise((resolve) => {
       const checkActorId = () => {
@@ -80,22 +81,22 @@ function useKeyValueAttributes(query) {
       };
       checkActorId();
     }).then(() => {
-      const queryUnsubscribe = lr.Attribute.subscribeToQuery({
-        attributes: [
-          ["$it", "$hasDataType", import_browser2.KeyValueAttribute],
+      const queryUnsubscribe = lr.Record.subscribeToQuery({
+        records: [
+          ["$it", "$hasDataType", import_browser2.KeyValueRecord],
           ...query
         ]
-      }, async ({ attributes: attributes2 }) => {
-        const values = await Promise.all(attributes2.map(async (a) => ({
-          _id: a.id,
-          ...await a.getValue()
+      }, async ({ records: records2 }) => {
+        const values = await Promise.all(records2.map(async (r) => ({
+          _id: r.id,
+          ...await r.getValue()
         })));
-        setAttributes(values);
-        attributes2.forEach((a) => {
-          a.subscribe(async () => {
-            const newValue = await a.getValue();
-            setAttributes((prev) => prev.map(
-              (v) => v._id === a.id ? { _id: a.id, ...newValue } : v
+        setRecords(values);
+        records2.forEach((r) => {
+          r.subscribe(async () => {
+            const newValue = await r.getValue();
+            setRecords((prev) => prev.map(
+              (v) => v._id === r.id ? { _id: r.id, ...newValue } : v
             ));
           });
         });
@@ -107,9 +108,10 @@ function useKeyValueAttributes(query) {
     return () => {
       unsubscribeFnPromise.then((fn) => fn());
     };
-  }, [lr.Attribute, setAttributes]);
-  return attributes;
+  }, [lr.Record, setRecords]);
+  return records;
 }
+var useKeyValueAttributes = useKeyValueRecords;
 
 // src/useUserInfo.ts
 var import_react5 = require("react");
@@ -126,6 +128,7 @@ function useUserInfo() {
   LinkedRecordsContext,
   LinkedRecordsProvider,
   useKeyValueAttributes,
+  useKeyValueRecords,
   useLinkedRecords,
   useUserInfo
 });

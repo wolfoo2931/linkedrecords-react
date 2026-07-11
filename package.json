@@ -16,7 +16,7 @@
   },
   "keywords": [],
   "author": "Oliver Wolf",
-  "license": "AGPL-3.0",
+  "license": "MIT",
   "description": "",
   "dependencies": {
     "@linkedrecords/browser": "^0.1.1",

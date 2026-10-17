@@ -47,8 +47,22 @@ var LinkedRecordsContext = (0, import_react.createContext)(void 0);
 var import_react2 = require("react");
 var import_browser = __toESM(require("@linkedrecords/browser"));
 var import_jsx_runtime = require("react/jsx-runtime");
-function LinkedRecordsProvider({ children, serverUrl }) {
-  const lr = import_browser.default.getPublicClient(serverUrl);
+function createClient(serverUrl, config) {
+  const lr = new import_browser.default(
+    new URL(serverUrl),
+    config.oidcConfig,
+    config.autoHandleRedirect,
+    config.deferUserInfoFetching
+  );
+  if (config.loginHandler) lr.setLoginHandler(config.loginHandler);
+  if (config.connectionLostHandler) lr.setConnectionLostHandler(config.connectionLostHandler);
+  if (config.unknownServerErrorHandler) lr.setUnknownServerErrorHandler(config.unknownServerErrorHandler);
+  if (config.quotaViolationErrorHandler) lr.setQuotaViolationErrorHandler(config.quotaViolationErrorHandler);
+  if (config.authorizationErrorHandler) lr.setAuthorizationErrorHandler(config.authorizationErrorHandler);
+  return lr;
+}
+function LinkedRecordsProvider({ children, serverUrl, config }) {
+  const [lr] = (0, import_react2.useState)(() => config ? createClient(serverUrl, config) : import_browser.default.getPublicClient(serverUrl));
   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(LinkedRecordsContext.Provider, { value: { lr }, children });
 }
 

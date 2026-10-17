@@ -3,16 +3,30 @@ import { createContext } from "react";
 var LinkedRecordsContext = createContext(void 0);
 
 // src/LinkedRecordsProvider.tsx
-import "react";
+import { useState } from "react";
 import LinkedRecords from "@linkedrecords/browser";
 import { jsx } from "react/jsx-runtime";
-function LinkedRecordsProvider({ children, serverUrl }) {
-  const lr = LinkedRecords.getPublicClient(serverUrl);
+function createClient(serverUrl, config) {
+  const lr = new LinkedRecords(
+    new URL(serverUrl),
+    config.oidcConfig,
+    config.autoHandleRedirect,
+    config.deferUserInfoFetching
+  );
+  if (config.loginHandler) lr.setLoginHandler(config.loginHandler);
+  if (config.connectionLostHandler) lr.setConnectionLostHandler(config.connectionLostHandler);
+  if (config.unknownServerErrorHandler) lr.setUnknownServerErrorHandler(config.unknownServerErrorHandler);
+  if (config.quotaViolationErrorHandler) lr.setQuotaViolationErrorHandler(config.quotaViolationErrorHandler);
+  if (config.authorizationErrorHandler) lr.setAuthorizationErrorHandler(config.authorizationErrorHandler);
+  return lr;
+}
+function LinkedRecordsProvider({ children, serverUrl, config }) {
+  const [lr] = useState(() => config ? createClient(serverUrl, config) : LinkedRecords.getPublicClient(serverUrl));
   return /* @__PURE__ */ jsx(LinkedRecordsContext.Provider, { value: { lr }, children });
 }
 
 // src/useRecords.ts
-import { useEffect, useState } from "react";
+import { useEffect, useState as useState2 } from "react";
 
 // src/useLinkedRecords.ts
 import { useContext } from "react";
@@ -31,7 +45,7 @@ function getQueryKey(query) {
 }
 function useKeyValueRecords(query) {
   const { lr } = useLinkedRecords();
-  const [records, setRecords] = useState([]);
+  const [records, setRecords] = useState2([]);
   const queryKey = getQueryKey(query);
   useEffect(() => {
     let cancelled = false;
@@ -96,10 +110,10 @@ function useKeyValueRecords(query) {
 var useKeyValueAttributes = useKeyValueRecords;
 
 // src/useUserInfo.ts
-import { useEffect as useEffect2, useState as useState2 } from "react";
+import { useEffect as useEffect2, useState as useState3 } from "react";
 function useUserInfo() {
   const { lr } = useLinkedRecords();
-  const [userInfo, setUserInfo] = useState2(null);
+  const [userInfo, setUserInfo] = useState3(null);
   useEffect2(() => {
     lr.getCurrentUserEmail().then((email) => setUserInfo({ email })).catch(() => setUserInfo(null));
   }, [lr]);

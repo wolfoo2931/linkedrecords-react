@@ -8,11 +8,23 @@ interface LinkedRecordsContextType {
 }
 declare const LinkedRecordsContext: react.Context<LinkedRecordsContextType | undefined>;
 
+type OIDCConfig = NonNullable<ConstructorParameters<typeof LinkedRecords>[1]>;
+interface LinkedRecordsConfig {
+    oidcConfig?: OIDCConfig;
+    autoHandleRedirect?: boolean;
+    deferUserInfoFetching?: boolean;
+    loginHandler?: () => void;
+    connectionLostHandler?: (err?: any) => void;
+    unknownServerErrorHandler?: (response: any) => void;
+    quotaViolationErrorHandler?: (response: any) => void;
+    authorizationErrorHandler?: (response: any) => void;
+}
 interface LinkedRecordsProviderProps {
     children: ReactNode;
     serverUrl: string;
+    config?: LinkedRecordsConfig;
 }
-declare function LinkedRecordsProvider({ children, serverUrl }: LinkedRecordsProviderProps): react_jsx_runtime.JSX.Element;
+declare function LinkedRecordsProvider({ children, serverUrl, config }: LinkedRecordsProviderProps): react_jsx_runtime.JSX.Element;
 
 interface KVValue {
     [key: string]: KVValue | string | boolean | number | undefined;
@@ -28,4 +40,4 @@ type UserInfo = {
 };
 declare function useUserInfo(): UserInfo | null;
 
-export { LinkedRecordsContext, type LinkedRecordsContextType, LinkedRecordsProvider, useKeyValueAttributes, useKeyValueRecords, useLinkedRecords, useUserInfo };
+export { type LinkedRecordsConfig, LinkedRecordsContext, type LinkedRecordsContextType, LinkedRecordsProvider, useKeyValueAttributes, useKeyValueRecords, useLinkedRecords, useUserInfo };

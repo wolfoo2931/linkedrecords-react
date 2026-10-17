@@ -1,25 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
 import { useLinkedRecords } from "./useLinkedRecords";
+import { getQueryKey } from "./queryKey";
 import { KeyValueRecord } from '@linkedrecords/browser';
 
 interface KVValue {
-  [key: string]: KVValue | string | boolean | number | undefined;
+  [key: string]: KVValue | string | boolean | number | Date | undefined;
 }
 
-// Callers usually pass a new query array on every render, so the effect
-// depends on a serialized key instead of the array identity. Functions
-// (e.g. record classes) would serialize to null, so they are keyed by name.
-function getQueryKey(query: any[]): string {
-  return JSON.stringify(query, (_, v) => (typeof v === 'function' ? `fn:${v.name}` : v));
+export interface KVRecord extends KVValue {
+  _id?: string;
+  _createdAt?: Date;
 }
 
-export function useKeyValueRecords(query: any[]): KVValue[]  {
+export function useKeyValueRecordsWithStatus(query: any[]): { records: KVRecord[], isLoading: boolean } {
   const { lr } = useLinkedRecords();
-  const [ records, setRecords ] = useState<KVValue[]>([]);
+  const [ records, setRecords ] = useState<KVRecord[]>([]);
+  const [ isLoading, setIsLoading ] = useState(true);
   const queryKey = getQueryKey(query);
 
   useEffect(() => {
+    setIsLoading(true);
+
     // The SDK has no way to remove a record observer, so observers registered
     // by this effect run check this flag and become no-ops after cleanup.
     let cancelled = false;
@@ -49,6 +51,7 @@ export function useKeyValueRecords(query: any[]): KVValue[]  {
       }, async ({ records }) => {
         const values = await Promise.all(records.map(async (r) => ({
           _id: r.id,
+          _createdAt: r.createdAt,
           ...(await r.getValue()),
         })));
 
@@ -57,6 +60,7 @@ export function useKeyValueRecords(query: any[]): KVValue[]  {
         }
 
         setRecords(values);
+        setIsLoading(false);
 
         records.forEach((r) => {
           if (subscribedRecordIds.has(r.id)) {
@@ -79,7 +83,7 @@ export function useKeyValueRecords(query: any[]): KVValue[]  {
             // Use functional update to avoid stale closure
             setRecords(prev => prev.map(v =>
               v._id === r.id
-                ? { _id: r.id, ...newValue }
+                ? { _id: r.id, _createdAt: r.createdAt, ...newValue }
                 : v
             ));
           });
@@ -100,7 +104,11 @@ export function useKeyValueRecords(query: any[]): KVValue[]  {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ lr, queryKey ]);
 
-  return records;
+  return { records, isLoading };
+}
+
+export function useKeyValueRecords(query: any[]): KVRecord[] {
+  return useKeyValueRecordsWithStatus(query).records;
 }
 
 /** @deprecated Use useKeyValueRecords instead. */

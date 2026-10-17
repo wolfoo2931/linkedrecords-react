@@ -32,8 +32,11 @@ var index_exports = {};
 __export(index_exports, {
   LinkedRecordsContext: () => LinkedRecordsContext,
   LinkedRecordsProvider: () => LinkedRecordsProvider,
+  useActorId: () => useActorId,
+  useFacts: () => useFacts,
   useKeyValueAttributes: () => useKeyValueAttributes,
   useKeyValueRecords: () => useKeyValueRecords,
+  useKeyValueRecordsWithStatus: () => useKeyValueRecordsWithStatus,
   useLinkedRecords: () => useLinkedRecords,
   useUserInfo: () => useUserInfo
 });
@@ -79,16 +82,20 @@ function useLinkedRecords() {
   return context;
 }
 
-// src/useRecords.ts
-var import_browser2 = require("@linkedrecords/browser");
+// src/queryKey.ts
 function getQueryKey(query) {
   return JSON.stringify(query, (_, v) => typeof v === "function" ? `fn:${v.name}` : v);
 }
-function useKeyValueRecords(query) {
+
+// src/useRecords.ts
+var import_browser2 = require("@linkedrecords/browser");
+function useKeyValueRecordsWithStatus(query) {
   const { lr } = useLinkedRecords();
   const [records, setRecords] = (0, import_react4.useState)([]);
+  const [isLoading, setIsLoading] = (0, import_react4.useState)(true);
   const queryKey = getQueryKey(query);
   (0, import_react4.useEffect)(() => {
+    setIsLoading(true);
     let cancelled = false;
     const subscribedRecordIds = /* @__PURE__ */ new Set();
     const unsubscribeFnPromise = new Promise((resolve) => {
@@ -112,12 +119,14 @@ function useKeyValueRecords(query) {
       }, async ({ records: records2 }) => {
         const values = await Promise.all(records2.map(async (r) => ({
           _id: r.id,
+          _createdAt: r.createdAt,
           ...await r.getValue()
         })));
         if (cancelled) {
           return;
         }
         setRecords(values);
+        setIsLoading(false);
         records2.forEach((r) => {
           if (subscribedRecordIds.has(r.id)) {
             return;
@@ -132,7 +141,7 @@ function useKeyValueRecords(query) {
               return;
             }
             setRecords((prev) => prev.map(
-              (v) => v._id === r.id ? { _id: r.id, ...newValue } : v
+              (v) => v._id === r.id ? { _id: r.id, _createdAt: r.createdAt, ...newValue } : v
             ));
           });
         });
@@ -146,26 +155,73 @@ function useKeyValueRecords(query) {
       unsubscribeFnPromise.then((fn) => fn());
     };
   }, [lr, queryKey]);
-  return records;
+  return { records, isLoading };
+}
+function useKeyValueRecords(query) {
+  return useKeyValueRecordsWithStatus(query).records;
 }
 var useKeyValueAttributes = useKeyValueRecords;
 
-// src/useUserInfo.ts
+// src/useFacts.ts
 var import_react5 = require("react");
+function useFacts(query) {
+  const { lr } = useLinkedRecords();
+  const [facts, setFacts] = (0, import_react5.useState)([]);
+  const [reloadCount, setReloadCount] = (0, import_react5.useState)(0);
+  const queryKey = getQueryKey(query);
+  (0, import_react5.useEffect)(() => {
+    let cancelled = false;
+    lr.Fact.findAll(query).then((result) => {
+      if (!cancelled) {
+        setFacts(result);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lr, queryKey, reloadCount]);
+  const reload = (0, import_react5.useCallback)(() => setReloadCount((c) => c + 1), []);
+  return { facts, reload };
+}
+
+// src/useUserInfo.ts
+var import_react6 = require("react");
 function useUserInfo() {
   const { lr } = useLinkedRecords();
-  const [userInfo, setUserInfo] = (0, import_react5.useState)(null);
-  (0, import_react5.useEffect)(() => {
+  const [userInfo, setUserInfo] = (0, import_react6.useState)(null);
+  (0, import_react6.useEffect)(() => {
     lr.getCurrentUserEmail().then((email) => setUserInfo({ email })).catch(() => setUserInfo(null));
   }, [lr]);
   return userInfo;
+}
+
+// src/useActorId.ts
+var import_react7 = require("react");
+function useActorId() {
+  const { lr } = useLinkedRecords();
+  const [actorId, setActorId] = (0, import_react7.useState)(lr.actorId);
+  (0, import_react7.useEffect)(() => {
+    let cancelled = false;
+    lr.ensureUserIdIsKnown().then((id) => {
+      if (!cancelled) {
+        setActorId(id);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lr]);
+  return actorId;
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   LinkedRecordsContext,
   LinkedRecordsProvider,
+  useActorId,
+  useFacts,
   useKeyValueAttributes,
   useKeyValueRecords,
+  useKeyValueRecordsWithStatus,
   useLinkedRecords,
   useUserInfo
 });

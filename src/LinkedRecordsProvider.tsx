@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import LinkedRecords from '@linkedrecords/browser';
 import { LinkedRecordsContext } from './linkedRecordsContext';
 
@@ -47,9 +47,11 @@ export function LinkedRecordsProvider({ children, serverUrl, config }: LinkedRec
   const [lr] = useState(() => (config
     ? createClient(serverUrl, config)
     : LinkedRecords.getPublicClient(serverUrl)));
+  // A new context value would re-render every consumer on each render.
+  const value = useMemo(() => ({ lr }), [lr]);
 
   return (
-    <LinkedRecordsContext.Provider value={{ lr }}>
+    <LinkedRecordsContext.Provider value={value}>
       {children}
     </LinkedRecordsContext.Provider>
   );

@@ -26,18 +26,23 @@ interface LinkedRecordsProviderProps {
 }
 declare function LinkedRecordsProvider({ children, serverUrl, config }: LinkedRecordsProviderProps): react_jsx_runtime.JSX.Element;
 
-interface KVValue {
-    [key: string]: KVValue | string | boolean | number | Date | undefined;
-}
-interface KVRecord extends KVValue {
+type JSONValue = string | number | boolean | null | JSONValue[] | {
+    [key: string]: JSONValue;
+};
+type KVValue = {
+    [key: string]: JSONValue | undefined;
+};
+type KVRecord<T extends object = KVValue> = T & {
     _id?: string;
     _createdAt?: Date;
-}
-declare function useKeyValueRecordsWithStatus(query: any[]): {
-    records: KVRecord[];
+};
+type CompoundRecordQuery = Parameters<LinkedRecords['Record']['subscribeToQuery']>[0];
+type RecordQueryClause = Exclude<CompoundRecordQuery[string], string>[number];
+declare function useKeyValueRecordsWithStatus<T extends object = KVValue>(query: RecordQueryClause[]): {
+    records: KVRecord<T>[];
     isLoading: boolean;
 };
-declare function useKeyValueRecords(query: any[]): KVRecord[];
+declare function useKeyValueRecords<T extends object = KVValue>(query: RecordQueryClause[]): KVRecord<T>[];
 /** @deprecated Use useKeyValueRecords instead. */
 declare const useKeyValueAttributes: typeof useKeyValueRecords;
 
@@ -57,4 +62,4 @@ declare function useUserInfo(): UserInfo | null;
 
 declare function useActorId(): string | undefined;
 
-export { type KVRecord, type LinkedRecordsConfig, LinkedRecordsContext, type LinkedRecordsContextType, LinkedRecordsProvider, useActorId, useFacts, useKeyValueAttributes, useKeyValueRecords, useKeyValueRecordsWithStatus, useLinkedRecords, useUserInfo };
+export { type KVRecord, type LinkedRecordsConfig, LinkedRecordsContext, type LinkedRecordsContextType, LinkedRecordsProvider, type RecordQueryClause, useActorId, useFacts, useKeyValueAttributes, useKeyValueRecords, useKeyValueRecordsWithStatus, useLinkedRecords, useUserInfo };

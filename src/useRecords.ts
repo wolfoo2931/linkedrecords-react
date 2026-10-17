@@ -1,103 +1,96 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from "react";
+import type LinkedRecords from '@linkedrecords/browser';
+import { KeyValueRecord } from '@linkedrecords/browser';
 import { useLinkedRecords } from "./useLinkedRecords";
 import { getQueryKey } from "./queryKey";
-import { KeyValueRecord } from '@linkedrecords/browser';
 
-interface KVValue {
-  [key: string]: KVValue | string | boolean | number | Date | undefined;
-}
+type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue };
 
-export interface KVRecord extends KVValue {
+type KVValue = { [key: string]: JSONValue | undefined };
+
+export type KVRecord<T extends object = KVValue> = T & {
   _id?: string;
   _createdAt?: Date;
-}
+};
 
-export function useKeyValueRecordsWithStatus(query: any[]): { records: KVRecord[], isLoading: boolean } {
+type CompoundRecordQuery = Parameters<LinkedRecords['Record']['subscribeToQuery']>[0];
+
+// One [subject, predicate, object] clause of a record query, e.g. ['$it', 'isA', 'Todo'].
+export type RecordQueryClause = Exclude<CompoundRecordQuery[string], string>[number];
+
+export function useKeyValueRecordsWithStatus<T extends object = KVValue>(query: RecordQueryClause[]): { records: KVRecord<T>[], isLoading: boolean } {
   const { lr } = useLinkedRecords();
-  const [ records, setRecords ] = useState<KVRecord[]>([]);
+  const [ records, setRecords ] = useState<KVRecord<T>[]>([]);
   const [ isLoading, setIsLoading ] = useState(true);
   const queryKey = getQueryKey(query);
 
   useEffect(() => {
     setIsLoading(true);
 
-    // The SDK has no way to remove a record observer, so observers registered
-    // by this effect run check this flag and become no-ops after cleanup.
+    // Values are read asynchronously; results which arrive after the query
+    // changed or the component unmounted are dropped.
     let cancelled = false;
-    // Records this effect run already observes, so repeated query results
-    // do not stack up observers on the same record.
-    const subscribedRecordIds = new Set<string | undefined>();
+    // Record observers by record id, so each record in the result is
+    // observed once and records which leave the result are unobserved.
+    const recordUnsubscribes = new Map<string | undefined, Promise<() => void>>();
 
-    const unsubscribeFnPromise = new Promise<void>((resolve) => {
-      const checkActorId = () => {
-        if (cancelled) {
+    // T is the value shape declared by the caller; the hook can not check it.
+    const toKVRecord = async (r: KeyValueRecord) => ({
+      _id: r.id,
+      _createdAt: r.createdAt,
+      ...(await r.getValue()),
+    }) as KVRecord<T>;
+
+    const queryUnsubscribe = lr.Record.subscribeToQuery({
+      records: [
+        ['$it', '$hasDataType', KeyValueRecord],
+        ...query
+      ],
+    }, async ({ records }) => {
+      const kvRecords = records as KeyValueRecord[];
+      const values = await Promise.all(kvRecords.map(toKVRecord));
+
+      if (cancelled) {
+        return;
+      }
+
+      setRecords(values);
+      setIsLoading(false);
+
+      const ids = new Set(kvRecords.map((r) => r.id));
+
+      recordUnsubscribes.forEach((unsubscribe, id) => {
+        if (!ids.has(id)) {
+          recordUnsubscribes.delete(id);
+          unsubscribe.then((fn) => fn());
+        }
+      });
+
+      kvRecords.forEach((r) => {
+        if (recordUnsubscribes.has(r.id)) {
           return;
         }
 
-        if (lr.actorId !== undefined) {
-          resolve();
-        } else {
-          setTimeout(checkActorId, 50);
-        }
-      };
-      checkActorId();
-    }).then(() => {
-      const queryUnsubscribe = lr.Record.subscribeToQuery({
-        records: [
-          ['$it', '$hasDataType', KeyValueRecord],
-          ...query
-        ],
-      }, async ({ records }) => {
-        const values = await Promise.all(records.map(async (r) => ({
-          _id: r.id,
-          _createdAt: r.createdAt,
-          ...(await r.getValue()),
-        })));
+        recordUnsubscribes.set(r.id, r.subscribe(async () => {
+          const newValue = await toKVRecord(r);
 
-        if (cancelled) {
-          return;
-        }
-
-        setRecords(values);
-        setIsLoading(false);
-
-        records.forEach((r) => {
-          if (subscribedRecordIds.has(r.id)) {
+          if (cancelled) {
             return;
           }
 
-          subscribedRecordIds.add(r.id);
-
-          r.subscribe(async () => {
-            if (cancelled) {
-              return;
-            }
-
-            const newValue = await r.getValue();
-
-            if (cancelled) {
-              return;
-            }
-
-            // Use functional update to avoid stale closure
-            setRecords(prev => prev.map(v =>
-              v._id === r.id
-                ? { _id: r.id, _createdAt: r.createdAt, ...newValue }
-                : v
-            ));
-          });
-        });
+          setRecords(prev => prev.map(v => (v._id === r.id ? newValue : v)));
+        }));
       });
+    });
 
-      return () => {
-        queryUnsubscribe.then(unsubscribe => unsubscribe());
-      };
+    queryUnsubscribe.catch((err) => {
+      console.error('useKeyValueRecords: could not subscribe to query', err);
     });
 
     return () => {
       cancelled = true;
-      unsubscribeFnPromise.then(fn => fn());
+      queryUnsubscribe.then((unsubscribe) => unsubscribe(), () => {});
+      recordUnsubscribes.forEach((unsubscribe) => unsubscribe.then((fn) => fn()));
     }
     // query is represented by queryKey; depending on the array itself would
     // resubscribe on every render.
@@ -107,8 +100,8 @@ export function useKeyValueRecordsWithStatus(query: any[]): { records: KVRecord[
   return { records, isLoading };
 }
 
-export function useKeyValueRecords(query: any[]): KVRecord[] {
-  return useKeyValueRecordsWithStatus(query).records;
+export function useKeyValueRecords<T extends object = KVValue>(query: RecordQueryClause[]): KVRecord<T>[] {
+  return useKeyValueRecordsWithStatus<T>(query).records;
 }
 
 /** @deprecated Use useKeyValueRecords instead. */

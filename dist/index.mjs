@@ -3,7 +3,7 @@ import { createContext } from "react";
 var LinkedRecordsContext = createContext(void 0);
 
 // src/LinkedRecordsProvider.tsx
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import LinkedRecords from "@linkedrecords/browser";
 import { jsx } from "react/jsx-runtime";
 function createClient(serverUrl, config) {
@@ -22,11 +22,13 @@ function createClient(serverUrl, config) {
 }
 function LinkedRecordsProvider({ children, serverUrl, config }) {
   const [lr] = useState(() => config ? createClient(serverUrl, config) : LinkedRecords.getPublicClient(serverUrl));
-  return /* @__PURE__ */ jsx(LinkedRecordsContext.Provider, { value: { lr }, children });
+  const value = useMemo(() => ({ lr }), [lr]);
+  return /* @__PURE__ */ jsx(LinkedRecordsContext.Provider, { value, children });
 }
 
 // src/useRecords.ts
 import { useEffect, useState as useState2 } from "react";
+import { KeyValueRecord } from "@linkedrecords/browser";
 
 // src/useLinkedRecords.ts
 import { useContext } from "react";
@@ -44,7 +46,6 @@ function getQueryKey(query) {
 }
 
 // src/useRecords.ts
-import { KeyValueRecord } from "@linkedrecords/browser";
 function useKeyValueRecordsWithStatus(query) {
   const { lr } = useLinkedRecords();
   const [records, setRecords] = useState2([]);
@@ -53,62 +54,53 @@ function useKeyValueRecordsWithStatus(query) {
   useEffect(() => {
     setIsLoading(true);
     let cancelled = false;
-    const subscribedRecordIds = /* @__PURE__ */ new Set();
-    const unsubscribeFnPromise = new Promise((resolve) => {
-      const checkActorId = () => {
-        if (cancelled) {
+    const recordUnsubscribes = /* @__PURE__ */ new Map();
+    const toKVRecord = async (r) => ({
+      _id: r.id,
+      _createdAt: r.createdAt,
+      ...await r.getValue()
+    });
+    const queryUnsubscribe = lr.Record.subscribeToQuery({
+      records: [
+        ["$it", "$hasDataType", KeyValueRecord],
+        ...query
+      ]
+    }, async ({ records: records2 }) => {
+      const kvRecords = records2;
+      const values = await Promise.all(kvRecords.map(toKVRecord));
+      if (cancelled) {
+        return;
+      }
+      setRecords(values);
+      setIsLoading(false);
+      const ids = new Set(kvRecords.map((r) => r.id));
+      recordUnsubscribes.forEach((unsubscribe, id) => {
+        if (!ids.has(id)) {
+          recordUnsubscribes.delete(id);
+          unsubscribe.then((fn) => fn());
+        }
+      });
+      kvRecords.forEach((r) => {
+        if (recordUnsubscribes.has(r.id)) {
           return;
         }
-        if (lr.actorId !== void 0) {
-          resolve();
-        } else {
-          setTimeout(checkActorId, 50);
-        }
-      };
-      checkActorId();
-    }).then(() => {
-      const queryUnsubscribe = lr.Record.subscribeToQuery({
-        records: [
-          ["$it", "$hasDataType", KeyValueRecord],
-          ...query
-        ]
-      }, async ({ records: records2 }) => {
-        const values = await Promise.all(records2.map(async (r) => ({
-          _id: r.id,
-          _createdAt: r.createdAt,
-          ...await r.getValue()
-        })));
-        if (cancelled) {
-          return;
-        }
-        setRecords(values);
-        setIsLoading(false);
-        records2.forEach((r) => {
-          if (subscribedRecordIds.has(r.id)) {
+        recordUnsubscribes.set(r.id, r.subscribe(async () => {
+          const newValue = await toKVRecord(r);
+          if (cancelled) {
             return;
           }
-          subscribedRecordIds.add(r.id);
-          r.subscribe(async () => {
-            if (cancelled) {
-              return;
-            }
-            const newValue = await r.getValue();
-            if (cancelled) {
-              return;
-            }
-            setRecords((prev) => prev.map(
-              (v) => v._id === r.id ? { _id: r.id, _createdAt: r.createdAt, ...newValue } : v
-            ));
-          });
-        });
+          setRecords((prev) => prev.map((v) => v._id === r.id ? newValue : v));
+        }));
       });
-      return () => {
-        queryUnsubscribe.then((unsubscribe) => unsubscribe());
-      };
+    });
+    queryUnsubscribe.catch((err) => {
+      console.error("useKeyValueRecords: could not subscribe to query", err);
     });
     return () => {
       cancelled = true;
-      unsubscribeFnPromise.then((fn) => fn());
+      queryUnsubscribe.then((unsubscribe) => unsubscribe(), () => {
+      });
+      recordUnsubscribes.forEach((unsubscribe) => unsubscribe.then((fn) => fn()));
     };
   }, [lr, queryKey]);
   return { records, isLoading };

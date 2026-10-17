@@ -67,12 +67,21 @@ function useLinkedRecords() {
 
 // src/useRecords.ts
 var import_browser2 = require("@linkedrecords/browser");
+function getQueryKey(query) {
+  return JSON.stringify(query, (_, v) => typeof v === "function" ? `fn:${v.name}` : v);
+}
 function useKeyValueRecords(query) {
   const { lr } = useLinkedRecords();
   const [records, setRecords] = (0, import_react4.useState)([]);
+  const queryKey = getQueryKey(query);
   (0, import_react4.useEffect)(() => {
+    let cancelled = false;
+    const subscribedRecordIds = /* @__PURE__ */ new Set();
     const unsubscribeFnPromise = new Promise((resolve) => {
       const checkActorId = () => {
+        if (cancelled) {
+          return;
+        }
         if (lr.actorId !== void 0) {
           resolve();
         } else {
@@ -91,10 +100,23 @@ function useKeyValueRecords(query) {
           _id: r.id,
           ...await r.getValue()
         })));
+        if (cancelled) {
+          return;
+        }
         setRecords(values);
         records2.forEach((r) => {
+          if (subscribedRecordIds.has(r.id)) {
+            return;
+          }
+          subscribedRecordIds.add(r.id);
           r.subscribe(async () => {
+            if (cancelled) {
+              return;
+            }
             const newValue = await r.getValue();
+            if (cancelled) {
+              return;
+            }
             setRecords((prev) => prev.map(
               (v) => v._id === r.id ? { _id: r.id, ...newValue } : v
             ));
@@ -106,9 +128,10 @@ function useKeyValueRecords(query) {
       };
     });
     return () => {
+      cancelled = true;
       unsubscribeFnPromise.then((fn) => fn());
     };
-  }, [lr.Record, setRecords]);
+  }, [lr, queryKey]);
   return records;
 }
 var useKeyValueAttributes = useKeyValueRecords;
